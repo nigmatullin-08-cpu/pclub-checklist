@@ -13,7 +13,8 @@
     .section h3 { font-size: 15px; margin-bottom: 8px; }
     label { display: block; margin: 6px 0; }
     input[type="number"], input[type="text"] { width: 80px; padding: 4px; }
-    #signature-canvas { width: 100%; height: 150px; border: 1px solid #ccc; border-radius: 8px; touch-action: none; background: #fafafa; display: block; }
+    /* Высоту холста уменьшили до 120px, чтобы он не был слишком огромным */
+    #signature-canvas { width: 100%; height: 120px; border: 1px solid #ccc; border-radius: 8px; touch-action: none; background-color: #ffffff; display: block; }
     button { padding: 10px 20px; font-size: 16px; margin-top: 10px; margin-right: 8px; border-radius: 8px; border: none; background: #2481cc; color: white; cursor: pointer; }
     button.clear { background: #999; }
   </style>
@@ -59,7 +60,6 @@
     document.addEventListener("DOMContentLoaded", function() {
       
       const canvas = document.getElementById('signature-canvas');
-      // ВАЖНО: Передаем backgroundColor прямо в библиотеку при создании
       const signaturePad = new SignaturePad(canvas, {
         backgroundColor: 'rgb(255, 255, 255)' 
       });
@@ -74,10 +74,25 @@
           return;
         }
         
-        // Получаем картинку СРАЗУ с белым фоном благодаря настройке выше
-        const signatureImage = signaturePad.toDataURL('image/jpeg', 0.5);
+        // --- УМЕНЬШЕНИЕ РАЗМЕРА КАРТИНКИ (чтобы влезло в лимит) ---
+        // Создаем уменьшенную копию холста
+        const maxWidth = 300; // Максимальная ширина картинки (в пикселях)
+        const scale = maxWidth / canvas.width;
+        
+        const tempCanvas = document.createElement('canvas');
+        tempCanvas.width = maxWidth;
+        tempCanvas.height = canvas.height * scale;
+        
+        const tempCtx = tempCanvas.getContext('2d');
+        tempCtx.fillStyle = '#ffffff'; // Белый фон
+        tempCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
+        tempCtx.drawImage(canvas, 0, 0, tempCanvas.width, tempCanvas.height);
+        
+        // Сжимаем в JPEG с качеством 0.6 (картинка будет маленькой и легкой)
+        const signatureImage = tempCanvas.toDataURL('image/jpeg', 0.6);
+        // -----------------------------------------------------------
 
-        // Собираем данные, включая галочки
+        // Собираем данные
         const data = {
           date: document.getElementById('date').value,
           cash: document.getElementById('cash').value,
