@@ -59,8 +59,9 @@
     document.addEventListener("DOMContentLoaded", function() {
       
       const canvas = document.getElementById('signature-canvas');
+      // ВАЖНО: Передаем backgroundColor прямо в библиотеку при создании
       const signaturePad = new SignaturePad(canvas, {
-        backgroundColor: 'rgba(255, 255, 255, 0)' // Прозрачный фон для рисования
+        backgroundColor: 'rgb(255, 255, 255)' 
       });
 
       document.getElementById('clear-btn').addEventListener('click', function() {
@@ -73,31 +74,21 @@
           return;
         }
         
-        // --- БЛОК СОЗДАНИЯ БЕЛОГО ФОНА ДЛЯ ПОДПИСИ ---
-        const tempCanvas = document.createElement('canvas');
-        tempCanvas.width = canvas.width;
-        tempCanvas.height = canvas.height;
-        const tempCtx = tempCanvas.getContext('2d');
-        
-        // Заливаем фон белым цветом (чтобы в Telegram не было черного квадрата)
-        tempCtx.fillStyle = '#ffffff';
-        tempCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
-        
-        // Переносим вашу подпись поверх белого фона
-        tempCtx.drawImage(canvas, 0, 0);
-        
-        // Конвертируем в JPEG с белым фоном
-        const imageWithWhiteBg = tempCanvas.toDataURL('image/jpeg', 0.5);
-        // ---------------------------------------------
+        // Получаем картинку СРАЗУ с белым фоном благодаря настройке выше
+        const signatureImage = signaturePad.toDataURL('image/jpeg', 0.5);
 
-        // Собираем данные
+        // Собираем данные, включая галочки
         const data = {
           date: document.getElementById('date').value,
           cash: document.getElementById('cash').value,
+          cash_match: document.getElementById('cash-match').checked,
           driveme: document.getElementById('driveme').value,
           evervess: document.getElementById('evervess').value,
           lipton: document.getElementById('lipton').value,
-          signature: imageWithWhiteBg // Отправляем исправленную картинку
+          pc_ok: document.getElementById('pc-ok').checked,
+          periph_ok: document.getElementById('periph-ok').checked,
+          clean_ok: document.getElementById('clean-ok').checked,
+          signature: signatureImage
         };
         
         // Отправляем в Telegram и закрываем
