@@ -75,14 +75,18 @@
           return;
         }
         
-        // Собираем данные
+           // Собираем данные
         const data = {
           date: document.getElementById('date').value,
           cash: document.getElementById('cash').value,
           driveme: document.getElementById('driveme').value,
           evervess: document.getElementById('evervess').value,
           lipton: document.getElementById('lipton').value,
-          signature: signaturePad.toDataURL('image/png')
+          
+          // НОВЫЙ КОД ДЛЯ СЖАТИЯ ПОДПИСИ:
+          // Берем нашу картинку, сжимаем её в JPEG с качеством 50% 
+          // и делаем её маленькой (максимум 300 пикселей в высоту)
+          signature: signaturePad.toDataURL('image/jpeg', 0.5)
         };
         
         // Отправляем в Telegram и закрываем
