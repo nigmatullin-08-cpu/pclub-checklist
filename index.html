@@ -67,40 +67,24 @@
         signaturePad.clear();
       });
 
-      document.getElementById('submit-btn').addEventListener('click', async function() {
+      document.getElementById('submit-btn').addEventListener('click', function() {
         if (signaturePad.isEmpty()) {
           alert('Поставьте подпись пальцем');
           return;
         }
         
-        const btn = document.getElementById('submit-btn');
-        btn.innerText = "Отправка...";
-        btn.disabled = true;
-
-        // Получаем ID пользователя из Telegram
-        const user = window.Telegram?.WebApp?.initDataUnsafe?.user;
-        if (!user) {
-            alert("Ошибка: не удалось получить данные пользователя Telegram.");
-            btn.innerText = "Сдать смену"; btn.disabled = false;
-            return;
-        }
-
-        // Делаем картинку с белым фоном
+        // Уменьшаем картинку, чтобы точно влезла в лимит
         const tempCanvas = document.createElement('canvas');
-        tempCanvas.width = canvas.width;
-        tempCanvas.height = canvas.height;
+        tempCanvas.width = 300; 
+        tempCanvas.height = (300 / canvas.width) * canvas.height; 
         const tempCtx = tempCanvas.getContext('2d');
         tempCtx.fillStyle = '#ffffff';
         tempCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
-        tempCtx.drawImage(canvas, 0, 0);
+        tempCtx.drawImage(canvas, 0, 0, tempCanvas.width, tempCanvas.height);
         
-        const signatureDataURL = tempCanvas.toDataURL('image/jpeg', 0.5);
-        // Превращаем Base64 в файл (Blob)
-        const blob = await (await fetch(signatureDataURL)).blob();
+        const signatureImage = tempCanvas.toDataURL('image/jpeg', 0.5);
 
-        // Данные формы (без картинки)
         const data = {
-          user_id: user.id,
           date: document.getElementById('date').value,
           cash: document.getElementById('cash').value,
           cash_match: document.getElementById('cash-match').checked,
@@ -110,24 +94,14 @@
           pc_ok: document.getElementById('pc-ok').checked,
           periph_ok: document.getElementById('periph-ok').checked,
           clean_ok: document.getElementById('clean-ok').checked,
+          signature: signatureImage
         };
-
-        // ВАЖНО: Ссылка на ваш сервер (мы поднимем его на Python)
-        const SERVER_URL = "https://subtitle-dangling-glimpse.ngrok-free.dev/api/upload";
-
-        const formData = new FormData();
-        formData.append('photo', blob, 'signature.jpg');
-        formData.append('data', JSON.stringify(data));
-
-        try {
-            // Отправляем картинку на наш локальный сервер
-            await fetch(SERVER_URL, { method: 'POST', body: formData });
-            
-            // Говорим Telegram закрыть окно
+        
+        if (window.Telegram && Telegram.WebApp) {
+            Telegram.WebApp.sendData(JSON.stringify(data));
             Telegram.WebApp.close();
-        } catch (e) {
-            alert("Ошибка отправки на сервер. Проверьте, запущен ли bot.py");
-            btn.innerText = "Сдать смену"; btn.disabled = false;
+        } else {
+            alert('Эта форма работает только внутри Telegram!');
         }
       });
       
