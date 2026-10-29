@@ -56,37 +56,48 @@
   <button id="submit-btn" type="button">Сдать смену</button>
 
   <script>
-    // Ждем полной загрузки страницы, чтобы все элементы точно были на месте
     document.addEventListener("DOMContentLoaded", function() {
       
-      // Инициализация холста
       const canvas = document.getElementById('signature-canvas');
-      const signaturePad = new SignaturePad(canvas);
+      const signaturePad = new SignaturePad(canvas, {
+        backgroundColor: 'rgba(255, 255, 255, 0)' // Прозрачный фон для рисования
+      });
 
-      // Кнопка "Очистить"
       document.getElementById('clear-btn').addEventListener('click', function() {
         signaturePad.clear();
       });
 
-      // Кнопка "Сдать"
       document.getElementById('submit-btn').addEventListener('click', function() {
         if (signaturePad.isEmpty()) {
           alert('Поставьте подпись пальцем');
           return;
         }
         
-           // Собираем данные
+        // --- БЛОК СОЗДАНИЯ БЕЛОГО ФОНА ДЛЯ ПОДПИСИ ---
+        const tempCanvas = document.createElement('canvas');
+        tempCanvas.width = canvas.width;
+        tempCanvas.height = canvas.height;
+        const tempCtx = tempCanvas.getContext('2d');
+        
+        // Заливаем фон белым цветом (чтобы в Telegram не было черного квадрата)
+        tempCtx.fillStyle = '#ffffff';
+        tempCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
+        
+        // Переносим вашу подпись поверх белого фона
+        tempCtx.drawImage(canvas, 0, 0);
+        
+        // Конвертируем в JPEG с белым фоном
+        const imageWithWhiteBg = tempCanvas.toDataURL('image/jpeg', 0.5);
+        // ---------------------------------------------
+
+        // Собираем данные
         const data = {
           date: document.getElementById('date').value,
           cash: document.getElementById('cash').value,
           driveme: document.getElementById('driveme').value,
           evervess: document.getElementById('evervess').value,
           lipton: document.getElementById('lipton').value,
-          
-          // НОВЫЙ КОД ДЛЯ СЖАТИЯ ПОДПИСИ:
-          // Берем нашу картинку, сжимаем её в JPEG с качеством 50% 
-          // и делаем её маленькой (максимум 300 пикселей в высоту)
-          signature: signaturePad.toDataURL('image/jpeg', 0.5)
+          signature: imageWithWhiteBg // Отправляем исправленную картинку
         };
         
         // Отправляем в Telegram и закрываем
@@ -98,7 +109,6 @@
         }
       });
       
-      // Сообщаем Telegram, что приложение готово
       if (window.Telegram && Telegram.WebApp) {
           Telegram.WebApp.ready();
       }
