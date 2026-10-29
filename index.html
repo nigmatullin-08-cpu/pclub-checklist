@@ -13,7 +13,6 @@
     .section h3 { font-size: 15px; margin-bottom: 8px; }
     label { display: block; margin: 6px 0; }
     input[type="number"], input[type="text"] { width: 80px; padding: 4px; }
-    /* Высоту холста уменьшили до 120px, чтобы он не был слишком огромным */
     #signature-canvas { width: 100%; height: 120px; border: 1px solid #ccc; border-radius: 8px; touch-action: none; background-color: #ffffff; display: block; }
     button { padding: 10px 20px; font-size: 16px; margin-top: 10px; margin-right: 8px; border-radius: 8px; border: none; background: #2481cc; color: white; cursor: pointer; }
     button.clear { background: #999; }
@@ -68,32 +67,40 @@
         signaturePad.clear();
       });
 
-      document.getElementById('submit-btn').addEventListener('click', function() {
+      document.getElementById('submit-btn').addEventListener('click', async function() {
         if (signaturePad.isEmpty()) {
           alert('Поставьте подпись пальцем');
           return;
         }
         
-        // --- УМЕНЬШЕНИЕ РАЗМЕРА КАРТИНКИ (чтобы влезло в лимит) ---
-        // Создаем уменьшенную копию холста
-        const maxWidth = 300; // Максимальная ширина картинки (в пикселях)
-        const scale = maxWidth / canvas.width;
-        
-        const tempCanvas = document.createElement('canvas');
-        tempCanvas.width = maxWidth;
-        tempCanvas.height = canvas.height * scale;
-        
-        const tempCtx = tempCanvas.getContext('2d');
-        tempCtx.fillStyle = '#ffffff'; // Белый фон
-        tempCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
-        tempCtx.drawImage(canvas, 0, 0, tempCanvas.width, tempCanvas.height);
-        
-        // Сжимаем в JPEG с качеством 0.6 (картинка будет маленькой и легкой)
-        const signatureImage = tempCanvas.toDataURL('image/jpeg', 0.6);
-        // -----------------------------------------------------------
+        const btn = document.getElementById('submit-btn');
+        btn.innerText = "Отправка...";
+        btn.disabled = true;
 
-        // Собираем данные
+        // Получаем ID пользователя из Telegram
+        const user = window.Telegram?.WebApp?.initDataUnsafe?.user;
+        if (!user) {
+            alert("Ошибка: не удалось получить данные пользователя Telegram.");
+            btn.innerText = "Сдать смену"; btn.disabled = false;
+            return;
+        }
+
+        // Делаем картинку с белым фоном
+        const tempCanvas = document.createElement('canvas');
+        tempCanvas.width = canvas.width;
+        tempCanvas.height = canvas.height;
+        const tempCtx = tempCanvas.getContext('2d');
+        tempCtx.fillStyle = '#ffffff';
+        tempCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
+        tempCtx.drawImage(canvas, 0, 0);
+        
+        const signatureDataURL = tempCanvas.toDataURL('image/jpeg', 0.5);
+        // Превращаем Base64 в файл (Blob)
+        const blob = await (await fetch(signatureDataURL)).blob();
+
+        // Данные формы (без картинки)
         const data = {
+          user_id: user.id,
           date: document.getElementById('date').value,
           cash: document.getElementById('cash').value,
           cash_match: document.getElementById('cash-match').checked,
@@ -103,15 +110,24 @@
           pc_ok: document.getElementById('pc-ok').checked,
           periph_ok: document.getElementById('periph-ok').checked,
           clean_ok: document.getElementById('clean-ok').checked,
-          signature: signatureImage
         };
-        
-        // Отправляем в Telegram и закрываем
-        if (window.Telegram && Telegram.WebApp) {
-            Telegram.WebApp.sendData(JSON.stringify(data));
+
+        // ВАЖНО: Ссылка на ваш сервер (мы поднимем его на Python)
+        const SERVER_URL = "https://ваш-сервер.com/api/upload"; 
+
+        const formData = new FormData();
+        formData.append('photo', blob, 'signature.jpg');
+        formData.append('data', JSON.stringify(data));
+
+        try {
+            // Отправляем картинку на наш локальный сервер
+            await fetch(SERVER_URL, { method: 'POST', body: formData });
+            
+            // Говорим Telegram закрыть окно
             Telegram.WebApp.close();
-        } else {
-            alert('Эта форма работает только внутри Telegram!');
+        } catch (e) {
+            alert("Ошибка отправки на сервер. Проверьте, запущен ли bot.py");
+            btn.innerText = "Сдать смену"; btn.disabled = false;
         }
       });
       
